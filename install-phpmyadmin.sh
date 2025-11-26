@@ -1,6 +1,5 @@
 #!/bin/bash
-
-echo "=== Installer phpMyAdmin Full Nginx + HTTPS + User Admin ==="
+echo "=== Installer phpMyAdmin Full Nginx + HTTPS + User Admin (FIXED VERSION) ==="
 sleep 1
 
 # ====== SET DOMAIN ======
@@ -38,15 +37,14 @@ MYSQL_SCRIPT
 
 echo "User admin MySQL berhasil dibuat."
 
-# ====== INSTALL phpMyAdmin MANUAL ======
+# ====== INSTALL phpMyAdmin MANUAL (FIXED VERSION 5.2.1) ======
 mkdir -p /usr/share/phpmyadmin
 cd /usr/share/phpmyadmin
 
-PHPM_VERSION=$(curl -s https://www.phpmyadmin.net/home_page/version.txt)
-wget https://files.phpmyadmin.net/phpMyAdmin/$PHPM_VERSION/phpMyAdmin-$PHPM_VERSION-all-languages.tar.gz
-tar xzf phpMyAdmin-$PHPM_VERSION-all-languages.tar.gz
-mv phpMyAdmin-$PHPM_VERSION-all-languages/* .
-rm -rf phpMyAdmin-$PHPM_VERSION-all-languages*
+wget https://files.phpmyadmin.net/phpMyAdmin/5.2.1/phpMyAdmin-5.2.1-all-languages.tar.gz
+tar xzf phpMyAdmin-5.2.1-all-languages.tar.gz
+mv phpMyAdmin-5.2.1-all-languages/* .
+rm -rf phpMyAdmin-5.2.1-all-languages*
 mkdir -p tmp
 chmod 777 tmp
 
