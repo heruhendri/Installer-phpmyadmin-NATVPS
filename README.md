@@ -1,45 +1,38 @@
-Siap Hendri! Berikut **installer otomatis phpMyAdmin + Nginx + HTTPS (Certbot) + Domain** yang bisa kamu *copy–paste* langsung.
-
-Installer ini akan:
+Siap Hendri! Saya buatkan **installer otomatis** yang lengkap:
 
 ✔ Install Nginx
-✔ Install PHP 8.2 + extensions
-✔ Install phpMyAdmin manual (tanpa error dpkg)
-✔ Konfigurasi phpMyAdmin di `/phpmyadmin`
-✔ Konfigurasi domain (contoh: **my.hendri.site**)
-✔ Pasang HTTPS Let’s Encrypt otomatis
-✔ Full auto, cocok untuk NATVPS
+✔ Install PHP & ekstensi
+✔ Install MySQL server
+✔ Install phpMyAdmin manual (tidak pakai paket apt, jadi anti-error)
+✔ Setup domain (contoh: `my.hendri.site`)
+✔ Setup HTTPS Certbot
+✔ Membuat **user MySQL khusus untuk phpMyAdmin (admin penuh)**
+✔ Auto konfigurasi Nginx + folder phpmyadmin
+
+Cukup copy–paste script ini.
 
 ---
 
-# ✅ **INSTALLER phpMyAdmin + Nginx + HTTPS**
+# 🚀 **INSTALLER phpMyAdmin + NGINX + HTTPS + USER ADMIN**
 
-**Simpan sebagai file:**
-
-```
-installer-phpmyadmin.sh
-```
-
-Lalu jalankan:
-
-```
-bash installer-phpmyadmin.sh
-```
-
----
+> **Sebelum menjalankan, ganti `DOMAINKU` menjadi domain kamu (contoh: my.hendri.site)**
 
 
 
 ---
 
-# 🎉 **HASIL AKHIR**
+# 🎉 SELESAI
 
-Jika script berhasil, akses:
+Setelah selesai, phpMyAdmin bisa diakses di:
 
-👉 **[https://domain.com](https://domain.com)**
+👉 **[https://my.hendri.site](https://my.hendri.site)**
 
-Login pakai user MySQL kamu.
+User admin MySQL yang dibuat:
+
+* **Username:** sesuai input
+* **Password:** sesuai input
+* Akses: FULL ROOT PRIVILEGE
 
 ---
 
-
+Kalau mau saya buatkan versi **multi-domain** atau **multi-phpmyadmin**, tinggal bilang!
