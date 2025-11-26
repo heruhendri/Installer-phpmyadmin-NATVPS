@@ -12,6 +12,7 @@ Cukup copy–paste script ini.
 
 ---
 ### 📷![SCRENSHOOT](https://github.com/heruhendri/Installer-phpmyadmin-NATVPS/blob/main/ss.png)
+---
 
 > **Sebelum menjalankan, ganti `DOMAINKU` menjadi domain kamu (contoh: phpmyadmin.hendri.site)**
 
