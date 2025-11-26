@@ -1,70 +1,77 @@
 #!/bin/bash
-echo "=== Installer phpMyAdmin Full Nginx + HTTPS + User Admin (FIXED VERSION) ==="
+
+echo "=== Installer phpMyAdmin Nginx + HTTPS (By Hendri) ==="
 sleep 1
 
-# ====== SET DOMAIN ======
 read -p "Masukkan domain untuk phpMyAdmin (contoh: my.hendri.site): " DOMAIN
+read -p "Masukkan password user MySQL admin: " MYSQLPASS
 
-echo "Domain = $DOMAIN"
-sleep 1
+# -------------------------------------------
+# Fix dpkg lock jika ada
+# -------------------------------------------
+echo "[*] Membersihkan dpkg lock..."
+killall apt apt-get dpkg >/dev/null 2>&1
+rm -f /var/lib/dpkg/lock-frontend
+rm -f /var/lib/dpkg/lock
+dpkg --configure -a
 
-# ====== UPDATE SERVER ======
-apt update && apt upgrade -y
+# -------------------------------------------
+# Install deps
+# -------------------------------------------
+apt update -y
+apt install -y nginx wget unzip curl gnupg php php-fpm php-mbstring php-zip php-gd php-json php-curl php-mysql
 
-# ====== INSTALL NGINX ======
-apt install nginx -y
-systemctl enable nginx
-systemctl start nginx
+mkdir -p /var/www/$DOMAIN
 
-# ====== INSTALL PHP ======
-apt install -y php php-fpm php-mysql php-mbstring php-gettext php-zip php-gd php-json php-curl php-xml
+# -------------------------------------------
+# Ambil PHPMyAdmin versi terbaru AUTOMATIS
+# -------------------------------------------
+echo "[*] Mengambil informasi versi phpMyAdmin terbaru..."
+LATEST=$(curl -s https://www.phpmyadmin.net/files/ | grep -oP "(?<=phpMyAdmin-)[0-9\.]+(?=/)" | head -1)
 
-# ====== INSTALL MYSQL ======
-apt install -y mariadb-server
-systemctl enable mariadb
-systemctl start mariadb
+echo "Versi terbaru: $LATEST"
 
-# ====== CREATE MYSQL ADMIN USER ======
-echo "Membuat user admin MySQL untuk phpMyAdmin"
-read -p "Masukkan username admin MySQL (contoh: pmaadmin): " PMAUSER
-read -p "Masukkan password admin MySQL: " PMAPASS
+cd /tmp
+wget https://files.phpmyadmin.net/phpMyAdmin/${LATEST}/phpMyAdmin-${LATEST}-all-languages.zip -O pma.zip
 
-mysql -u root <<MYSQL_SCRIPT
-CREATE USER '$PMAUSER'@'localhost' IDENTIFIED BY '$PMAPASS';
-GRANT ALL PRIVILEGES ON *.* TO '$PMAUSER'@'localhost' WITH GRANT OPTION;
-FLUSH PRIVILEGES;
-MYSQL_SCRIPT
+unzip pma.zip
+rm -rf /var/www/$DOMAIN/phpmyadmin
+mv phpMyAdmin-${LATEST}-all-languages /var/www/$DOMAIN/phpmyadmin
 
-echo "User admin MySQL berhasil dibuat."
+chown -R www-data:www-data /var/www/$DOMAIN/phpmyadmin
 
-# ====== INSTALL phpMyAdmin MANUAL (FIXED VERSION 5.2.1) ======
-mkdir -p /usr/share/phpmyadmin
-cd /usr/share/phpmyadmin
+# -------------------------------------------
+# Konfigurasi user MySQL admin
+# -------------------------------------------
+echo "[*] Membuat user MySQL admin..."
 
-wget https://files.phpmyadmin.net/phpMyAdmin/5.2.1/phpMyAdmin-5.2.1-all-languages.tar.gz
-tar xzf phpMyAdmin-5.2.1-all-languages.tar.gz
-mv phpMyAdmin-5.2.1-all-languages/* .
-rm -rf phpMyAdmin-5.2.1-all-languages*
-mkdir -p tmp
-chmod 777 tmp
+mysql -e "DROP USER IF EXISTS 'hendri'@'localhost';"
+mysql -e "CREATE USER 'hendri'@'localhost' IDENTIFIED BY '${MYSQLPASS}';"
+mysql -e "GRANT ALL PRIVILEGES ON *.* TO 'hendri'@'localhost' WITH GRANT OPTION;"
+mysql -e "FLUSH PRIVILEGES;"
 
-# ====== NGINX CONFIG ======
-cat > /etc/nginx/sites-available/$DOMAIN <<EOF
+echo "[OK] User MySQL admin: hendri"
+
+# -------------------------------------------
+# Buat Nginx config
+# -------------------------------------------
+echo "[*] Membuat konfigurasi Nginx..."
+
+cat >/etc/nginx/sites-available/$DOMAIN <<EOF
 server {
     listen 80;
     server_name $DOMAIN;
 
-    root /usr/share/phpmyadmin;
+    root /var/www/$DOMAIN/phpmyadmin;
     index index.php index.html;
 
     location / {
-        try_files \$uri \$uri/ /index.php?\$query_string;
+        try_files \$uri \$uri/ /index.php?\$args;
     }
 
-    location ~ \.php\$ {
+    location ~ \.php$ {
         include snippets/fastcgi-php.conf;
         fastcgi_pass unix:/run/php/php-fpm.sock;
-        fastcgi_param SCRIPT_FILENAME \$document_root\$fastcgi_script_name;
     }
 
     location ~ /\.ht {
@@ -73,17 +80,23 @@ server {
 }
 EOF
 
-ln -s /etc/nginx/sites-available/$DOMAIN /etc/nginx/sites-enabled/
+ln -sf /etc/nginx/sites-available/$DOMAIN /etc/nginx/sites-enabled/$DOMAIN
 nginx -t && systemctl reload nginx
 
-# ====== INSTALL HTTPS ======
-apt install certbot python3-certbot-nginx -y
+# -------------------------------------------
+# Install HTTPS
+# -------------------------------------------
+echo "[*] Mengaktifkan HTTPS dengan Certbot..."
+apt install -y certbot python3-certbot-nginx
+
 certbot --nginx -d $DOMAIN --non-interactive --agree-tos -m admin@$DOMAIN
 
-# ====== SELESAI ======
+# -------------------------------------------
+# Selesai
+# -------------------------------------------
 echo "============================================"
 echo "phpMyAdmin berhasil diinstal!"
-echo "Akses: https://$DOMAIN"
-echo "User MySQL admin: $PMAUSER"
-echo "Password: $PMAPASS"
+echo "URL: https://$DOMAIN"
+echo "User MySQL admin: hendri"
+echo "Password: $MYSQLPASS"
 echo "============================================"
