@@ -1,4 +1,5 @@
 #!/bin/bash
+
 echo "=== Installer phpMyAdmin Full Nginx + HTTPS + User Admin ==="
 sleep 1
 
