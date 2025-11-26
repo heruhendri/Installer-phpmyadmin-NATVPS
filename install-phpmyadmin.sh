@@ -1,97 +1,81 @@
 #!/bin/bash
 
-DOMAIN="my.hendri.site"
-PMA_PATH="/var/www/$DOMAIN/phpmyadmin"
-MYSQL_USER="hendri"
-MYSQL_PASS="rembulan"
+echo "=== Installer phpMyAdmin + Nginx + HTTPS by Hendri ==="
 
-echo "[*] Install dependencies..."
-apt update -y
-apt install -y nginx wget unzip php php-fpm php-mysql php-zip php-json php-mbstring php-cli php-xml php-curl certbot python3-certbot-nginx
+read -p "Masukkan domain untuk phpMyAdmin (contoh: my.hendri.site): " DOMAIN
 
-# =====================================================
-# AMBIL VERSI TERBARU VIA API RESMI PHPMyAdmin
-# =====================================================
-echo "[*] Mengambil versi phpMyAdmin terbaru..."
-LATEST=$(wget -qO- https://www.phpmyadmin.net/home_page/version.json | grep -oP '"version":\s*"\K[^"]+')
+echo "Updating system..."
+apt update && apt upgrade -y
 
-if [ -z "$LATEST" ]; then
-    echo "[ERROR] Gagal mengambil versi terbaru!"
-    exit 1
-fi
+echo "Install Nginx..."
+apt install nginx -y
+systemctl enable nginx
+systemctl start nginx
 
-echo "[OK] Versi terbaru: $LATEST"
+echo "Install PHP + extensions..."
+apt install -y php php-fpm php-mysql php-mbstring php-zip php-gd php-json php-curl php-xml php-cli unzip
 
-# =====================================================
-# DOWNLOAD & EXTRACT FILE
-# =====================================================
-URL="https://files.phpmyadmin.net/phpMyAdmin/$LATEST/phpMyAdmin-$LATEST-all-languages.zip"
+echo "Restart PHP-FPM..."
+systemctl restart php8.2-fpm || systemctl restart php-fpm
 
-echo "[*] Download phpMyAdmin dari: $URL"
-wget -O pma.zip "$URL"
+echo "Download phpMyAdmin..."
+mkdir -p /var/www/phpmyadmin
+cd /var/www/phpmyadmin
 
-echo "[*] Extract phpMyAdmin..."
-unzip pma.zip
-rm -f pma.zip
+wget https://www.phpmyadmin.net/downloads/phpMyAdmin-latest-all-languages.zip
+unzip phpMyAdmin-latest-all-languages.zip
+rm phpMyAdmin-latest-all-languages.zip
 
-mv "phpMyAdmin-$LATEST-all-languages" "$PMA_PATH"
-mkdir -p "$PMA_PATH/tmp"
-chmod 777 "$PMA_PATH/tmp"
+mv phpMyAdmin-*/ phpmyadmin
 
-echo "[*] Set ownership..."
-chown -R www-data:www-data "$PMA_PATH"
+echo "Membuat folder temp & config..."
+mkdir -p /var/www/phpmyadmin/phpmyadmin/tmp
+chmod 777 /var/www/phpmyadmin/phpmyadmin/tmp
 
-# =====================================================
-# BUAT USER MYSQL
-# =====================================================
-echo "[*] Membuat user MySQL admin..."
-mysql -e "CREATE USER IF NOT EXISTS '$MYSQL_USER'@'localhost' IDENTIFIED BY '$MYSQL_PASS';"
-mysql -e "GRANT ALL PRIVILEGES ON *.* TO '$MYSQL_USER'@'localhost' WITH GRANT OPTION;"
-mysql -e "FLUSH PRIVILEGES;"
+cp /var/www/phpmyadmin/phpmyadmin/config.sample.inc.php /var/www/phpmyadmin/phpmyadmin/config.inc.php
 
-echo "[OK] User MySQL admin: $MYSQL_USER"
+# Random blowfish secret
+SECRET=$(openssl rand -base64 32)
+sed -i "s|\$cfg\['blowfish_secret'\] = ''|\$cfg['blowfish_secret'] = '$SECRET'|g" /var/www/phpmyadmin/phpmyadmin/config.inc.php
 
-# =====================================================
-# BUAT KONFIGURASI NGINX
-# =====================================================
-echo "[*] Membuat konfigurasi Nginx..."
+echo "Setting permission..."
+chown -R www-data:www-data /var/www/phpmyadmin
+
+echo "Membuat konfigurasi NGINX untuk domain $DOMAIN..."
 
 cat > /etc/nginx/sites-available/$DOMAIN <<EOF
 server {
     listen 80;
     server_name $DOMAIN;
 
-    root $PMA_PATH;
-    index index.php index.html index.htm;
+    root /var/www/phpmyadmin/phpmyadmin;
+
+    index index.php index.html;
 
     location / {
-        try_files \$uri \$uri/ /index.php?\$args;
+        try_files \$uri \$uri/ /index.php;
     }
 
     location ~ \.php\$ {
         include snippets/fastcgi-php.conf;
-        fastcgi_pass unix:/var/run/php/php-fpm.sock;
+        fastcgi_pass unix:/run/php/php-fpm.sock;
     }
 
-    location ~ /\.ht {
-        deny all;
+    location ~* \.(js|css|png|jpg|jpeg|gif|ico)\$ {
+        try_files \$uri =404;
     }
 }
 EOF
 
-ln -sf /etc/nginx/sites-available/$DOMAIN /etc/nginx/sites-enabled/$DOMAIN
+ln -s /etc/nginx/sites-available/$DOMAIN /etc/nginx/sites-enabled/
+
 nginx -t && systemctl reload nginx
 
-# =====================================================
-# ENABLE HTTPS CERTBOT
-# =====================================================
-echo "[*] Mengaktifkan HTTPS..."
+echo "Install certbot..."
+apt install certbot python3-certbot-nginx -y
+
+echo "Generate HTTPS untuk $DOMAIN ..."
 certbot --nginx -d $DOMAIN --non-interactive --agree-tos -m admin@$DOMAIN
 
-echo "============================================"
-echo "phpMyAdmin berhasil diinstal!"
-echo "URL: https://$DOMAIN"
-echo "User MySQL admin: $MYSQL_USER"
-echo "Password: $MYSQL_PASS"
-echo "Directory: $PMA_PATH"
-echo "============================================"
+echo "Selesai! phpMyAdmin dapat diakses di:"
+echo "https://$DOMAIN"
