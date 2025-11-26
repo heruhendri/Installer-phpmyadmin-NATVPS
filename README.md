@@ -12,8 +12,15 @@ Siap Hendri! Saya buatkan **installer otomatis** yang lengkap:
 Cukup copy–paste script ini.
 
 ---
+# 📌LINK INSTALL AUTO
 
-# 🚀 **INSTALLER phpMyAdmin + NGINX + HTTPS + USER ADMIN**
+```bash
+wget https://raw.githubusercontent.com/heruhendri/Installer-phpmyadmin-NATVPS/main/install-phpmyadmin.sh
+chmod +x install-phpmyadmin.sh
+./install-phpmyadmin.sh
+```
+
+## 🚀 **INSTALLER phpMyAdmin + NGINX + HTTPS + USER ADMIN**
 
 > **Sebelum menjalankan, ganti `DOMAINKU` menjadi domain kamu (contoh: my.hendri.site)**
 
@@ -34,5 +41,3 @@ User admin MySQL yang dibuat:
 * Akses: FULL ROOT PRIVILEGE
 
 ---
-
-Kalau mau saya buatkan versi **multi-domain** atau **multi-phpmyadmin**, tinggal bilang!
