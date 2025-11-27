@@ -19,8 +19,8 @@ echo "Restart PHP-FPM..."
 systemctl restart php8.2-fpm || systemctl restart php-fpm
 
 echo "Download phpMyAdmin..."
-mkdir -p /usr/share/phpmyadmin
-cd /usr/share/phpmyadmin
+mkdir -p /usr/share
+cd /usr/share
 
 wget https://www.phpmyadmin.net/downloads/phpMyAdmin-latest-all-languages.zip
 unzip phpMyAdmin-latest-all-languages.zip
@@ -29,14 +29,14 @@ rm phpMyAdmin-latest-all-languages.zip
 mv phpMyAdmin-*/ phpmyadmin
 
 echo "Membuat folder temp & config..."
-mkdir -p /usr/share/phpmyadmin/phpmyadmin/tmp
-chmod 777 /usr/share/phpmyadmin/phpmyadmin/tmp
+mkdir -p /usr/share/phpmyadmin/tmp
+chmod 777 /usr/share/phpmyadmin/tmp
 
-cp /usr/share/phpmyadmin/phpmyadmin/config.sample.inc.php /usr/share/phpmyadmin/phpmyadmin/config.inc.php
+cp /usr/share/phpmyadmin/config.sample.inc.php /usr/share/phpmyadmin/config.inc.php
 
 # Random blowfish secret
 SECRET=$(openssl rand -base64 32)
-sed -i "s|\$cfg\['blowfish_secret'\] = ''|\$cfg['blowfish_secret'] = '$SECRET'|g" /usr/share/phpmyadmin/phpmyadmin/config.inc.php
+sed -i "s|\$cfg\['blowfish_secret'\] = ''|\$cfg['blowfish_secret'] = '$SECRET'|g" /usr/share/phpmyadmin/config.inc.php
 
 echo "Setting permission..."
 chown -R www-data:www-data /usr/share/phpmyadmin
@@ -48,7 +48,7 @@ server {
     listen 80;
     server_name $DOMAIN;
 
-    root /usr/share/phpmyadmin/phpmyadmin;
+    root /usr/share/phpmyadmin;
 
     index index.php index.html;
 
