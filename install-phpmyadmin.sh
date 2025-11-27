@@ -112,3 +112,11 @@ echo "MySQL Root Password: $MYSQL_ROOT_PASS"
 echo "Lokasi penyimpanan password: /root/mysql-root-password.txt"
 echo ""
 echo "Installer by Hendri selesai!"
+
+# ----------- HAPUS FILE INSTALLER ----------
+SCRIPT_NAME=$(basename "$0")
+
+echo "Menghapus file installer: $SCRIPT_NAME"
+rm -f "$SCRIPT_NAME"
+
+echo "Installer telah dihapus!"
