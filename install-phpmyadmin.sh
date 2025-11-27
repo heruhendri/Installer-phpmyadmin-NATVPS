@@ -1,8 +1,12 @@
 #!/bin/bash
 
-echo "=== Installer phpMyAdmin + Nginx + HTTPS by Hendri ==="
+echo "=== Installer phpMyAdmin + Nginx + MySQL + HTTPS by Hendri ==="
 
 read -p "Masukkan domain untuk phpMyAdmin (contoh: my.hendri.site): " DOMAIN
+
+# Set password root MySQL
+MYSQL_ROOT_PASS=$(openssl rand -base64 16)
+echo "Password root MySQL akan dibuat otomatis."
 
 echo "Updating system..."
 apt update && apt upgrade -y
@@ -29,7 +33,23 @@ echo "PHP-FPM socket: $SOCK"
 echo "Restart PHP-FPM..."
 systemctl restart php${PHPVER}-fpm || systemctl restart php-fpm
 
-# Hapus folder phpMyAdmin lama jika ada
+echo "Install MySQL Server (MariaDB)..."
+apt install mariadb-server -y
+systemctl enable mariadb
+systemctl start mariadb
+
+echo "Konfigurasi MySQL secure-install otomatis..."
+mysql -e "UPDATE mysql.user SET Password = PASSWORD('$MYSQL_ROOT_PASS') WHERE User = 'root';"
+mysql -e "DELETE FROM mysql.user WHERE User='';"
+mysql -e "DROP DATABASE IF EXISTS test;"
+mysql -e "DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';"
+mysql -e "FLUSH PRIVILEGES;"
+
+echo "🔐 Password root MySQL: $MYSQL_ROOT_PASS"
+echo "Disimpan ke /root/mysql-root-password.txt"
+echo "$MYSQL_ROOT_PASS" > /root/mysql-root-password.txt
+
+# Hapus phpMyAdmin lama bila ada
 rm -rf /usr/share/phpmyadmin
 mkdir -p /usr/share
 
@@ -40,7 +60,7 @@ unzip pma.zip
 rm pma.zip
 mv phpMyAdmin-*/ phpmyadmin
 
-echo "Konfigurasi folder dan file..."
+echo "Konfigurasi phpMyAdmin..."
 mkdir -p /usr/share/phpmyadmin/tmp
 chmod 777 /usr/share/phpmyadmin/tmp
 
@@ -88,6 +108,12 @@ apt install certbot python3-certbot-nginx -y
 echo "Generate HTTPS untuk $DOMAIN ..."
 certbot --nginx -d $DOMAIN --non-interactive --agree-tos -m admin@$DOMAIN
 
+echo ""
 echo "=== INSTALL SELESAI ==="
 echo "phpMyAdmin dapat diakses di:"
 echo "https://$DOMAIN"
+echo ""
+echo "=== INFO MYSQL ==="
+echo "User: root"
+echo "Password: $MYSQL_ROOT_PASS"
+echo "File password: /root/mysql-root-password.txt"
