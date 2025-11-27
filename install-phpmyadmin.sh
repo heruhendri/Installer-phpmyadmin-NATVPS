@@ -15,20 +15,32 @@ systemctl start nginx
 echo "Install PHP + extensions..."
 apt install -y php php-fpm php-mysql php-mbstring php-zip php-gd php-json php-curl php-xml php-cli unzip
 
+# Detect versi PHP-FPM otomatis
+PHPVER=$(php -r "echo PHP_MAJOR_VERSION.'.'.PHP_MINOR_VERSION;")
+SOCK="/run/php/php${PHPVER}-fpm.sock"
+
+if [ ! -S "$SOCK" ]; then
+    echo "PHP-FPM tidak ditemukan di $SOCK, mencari otomatis..."
+    SOCK=$(find /run/php -name "php*-fpm.sock" | head -n 1)
+fi
+
+echo "PHP-FPM socket: $SOCK"
+
 echo "Restart PHP-FPM..."
-systemctl restart php8.2-fpm || systemctl restart php-fpm
+systemctl restart php${PHPVER}-fpm || systemctl restart php-fpm
+
+# Hapus folder phpMyAdmin lama jika ada
+rm -rf /usr/share/phpmyadmin
+mkdir -p /usr/share
 
 echo "Download phpMyAdmin..."
-mkdir -p /usr/share
 cd /usr/share
-
-wget https://www.phpmyadmin.net/downloads/phpMyAdmin-latest-all-languages.zip
-unzip phpMyAdmin-latest-all-languages.zip
-rm phpMyAdmin-latest-all-languages.zip
-
+wget https://www.phpmyadmin.net/downloads/phpMyAdmin-latest-all-languages.zip -O pma.zip
+unzip pma.zip
+rm pma.zip
 mv phpMyAdmin-*/ phpmyadmin
 
-echo "Membuat folder temp & config..."
+echo "Konfigurasi folder dan file..."
 mkdir -p /usr/share/phpmyadmin/tmp
 chmod 777 /usr/share/phpmyadmin/tmp
 
@@ -41,7 +53,7 @@ sed -i "s|\$cfg\['blowfish_secret'\] = ''|\$cfg['blowfish_secret'] = '$SECRET'|g
 echo "Setting permission..."
 chown -R www-data:www-data /usr/share/phpmyadmin
 
-echo "Membuat konfigurasi NGINX untuk domain $DOMAIN..."
+echo "Membuat konfigurasi NGINX..."
 
 cat > /etc/nginx/sites-available/$DOMAIN <<EOF
 server {
@@ -49,7 +61,6 @@ server {
     server_name $DOMAIN;
 
     root /usr/share/phpmyadmin;
-
     index index.php index.html;
 
     location / {
@@ -58,7 +69,7 @@ server {
 
     location ~ \.php\$ {
         include snippets/fastcgi-php.conf;
-        fastcgi_pass unix:/run/php/php8.2-fpm.sock; # Sesuaikan dengan versi PHP Anda
+        fastcgi_pass unix:$SOCK;
     }
 
     location ~* \.(js|css|png|jpg|jpeg|gif|ico)\$ {
@@ -67,15 +78,16 @@ server {
 }
 EOF
 
-ln -s /etc/nginx/sites-available/$DOMAIN /etc/nginx/sites-enabled/
+ln -sf /etc/nginx/sites-available/$DOMAIN /etc/nginx/sites-enabled/
 
 nginx -t && systemctl reload nginx
 
-echo "Install certbot..."
+echo "Install Certbot + plugin NGINX..."
 apt install certbot python3-certbot-nginx -y
 
 echo "Generate HTTPS untuk $DOMAIN ..."
 certbot --nginx -d $DOMAIN --non-interactive --agree-tos -m admin@$DOMAIN
 
-echo "Selesai! phpMyAdmin dapat diakses di:"
+echo "=== INSTALL SELESAI ==="
+echo "phpMyAdmin dapat diakses di:"
 echo "https://$DOMAIN"
