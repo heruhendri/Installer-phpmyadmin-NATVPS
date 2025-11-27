@@ -3,10 +3,8 @@
 echo "=== Installer phpMyAdmin + Nginx + MySQL + HTTPS by Hendri ==="
 
 read -p "Masukkan domain untuk phpMyAdmin (contoh: my.hendri.site): " DOMAIN
-
-# Set password root MySQL
-MYSQL_ROOT_PASS=$(openssl rand -base64 16)
-echo "Password root MySQL akan dibuat otomatis."
+read -s -p "Masukkan password MySQL root yang ingin digunakan: " MYSQL_ROOT_PASS
+echo ""
 
 echo "Updating system..."
 apt update && apt upgrade -y
@@ -38,14 +36,13 @@ apt install mariadb-server -y
 systemctl enable mariadb
 systemctl start mariadb
 
-echo "Konfigurasi MySQL secure-install otomatis..."
-mysql -e "UPDATE mysql.user SET Password = PASSWORD('$MYSQL_ROOT_PASS') WHERE User = 'root';"
-mysql -e "DELETE FROM mysql.user WHERE User='';"
-mysql -e "DROP DATABASE IF EXISTS test;"
-mysql -e "DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';"
-mysql -e "FLUSH PRIVILEGES;"
+echo "Mengatur password MySQL root..."
+mysql <<EOF
+ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '$MYSQL_ROOT_PASS';
+FLUSH PRIVILEGES;
+EOF
 
-echo "🔐 Password root MySQL: $MYSQL_ROOT_PASS"
+echo "🔐 Password root MySQL telah diset: $MYSQL_ROOT_PASS"
 echo "Disimpan ke /root/mysql-root-password.txt"
 echo "$MYSQL_ROOT_PASS" > /root/mysql-root-password.txt
 
@@ -102,7 +99,7 @@ ln -sf /etc/nginx/sites-available/$DOMAIN /etc/nginx/sites-enabled/
 
 nginx -t && systemctl reload nginx
 
-echo "Install Certbot + plugin NGINX..."
+echo "Install Certbot..."
 apt install certbot python3-certbot-nginx -y
 
 echo "Generate HTTPS untuk $DOMAIN ..."
@@ -110,10 +107,7 @@ certbot --nginx -d $DOMAIN --non-interactive --agree-tos -m admin@$DOMAIN
 
 echo ""
 echo "=== INSTALL SELESAI ==="
-echo "phpMyAdmin dapat diakses di:"
-echo "https://$DOMAIN"
+echo "phpMyAdmin dapat diakses di: https://$DOMAIN"
 echo ""
-echo "=== INFO MYSQL ==="
-echo "User: root"
-echo "Password: $MYSQL_ROOT_PASS"
+echo "MySQL Root Password: $MYSQL_ROOT_PASS"
 echo "File password: /root/mysql-root-password.txt"
